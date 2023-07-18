@@ -6,6 +6,7 @@ const io = new Server(8080, { cors: { origin: '*' } })
 const shapes: Shape[] = []
 const users: Set<{ id: string; socket: Socket }> = new Set()
 io.on('connection', (socket: Socket) => {
+  logUserInteraction()
   console.log('New user connected:', socket.id)
   socket.emit('snapshot', shapes)
   const newUser = { id: socket.id, socket }
@@ -21,11 +22,13 @@ io.on('connection', (socket: Socket) => {
 
   socket.on('cursor-position', ({ x, y }) => {
     socket.volatile.broadcast.emit('cursor-position', { id: socket.id, cursorX: x, cursorY: y })
+    logUserInteraction()
   })
 
   socket.on('create-shape', (shape) => {
     shapes.push(shape)
     socket.broadcast.emit('snapshot', shapes)
+    logUserInteraction()
   })
 
   socket.on('update-shape', (updatedShape) => {
@@ -36,10 +39,30 @@ io.on('connection', (socket: Socket) => {
     shape.w = updatedShape.w
     shape.h = updatedShape.h
     socket.broadcast.emit('update-shape', shape)
+    logUserInteraction()
   })
 
   socket.on('disconnect', () => {
     users.delete(newUser)
     socket.broadcast.emit('user-exited', newUser.id)
+    console.log('User disconnected:', socket.id, 'Remaining users:', users.size)
   })
 })
+
+const logUserInteraction = (function() {
+  const IDLE_PERIOD = 5 * 60 * 1000 // 5 minutes
+  let wentIdleAt: number | null = Date.now()
+  let timeout: NodeJS.Timeout | null = null
+  return function () {
+    if (wentIdleAt) {
+      const inactivity = Math.round((Date.now() - wentIdleAt) / 1000)
+      console.log(`User interacted after ${inactivity} seconds of inactivity`)
+      wentIdleAt = null
+    }
+    if (timeout) clearTimeout(timeout)
+    timeout = setTimeout(() => {
+      wentIdleAt = Date.now()
+      console.log(`No interactions for last ${Math.floor(IDLE_PERIOD / 1000)} seconds`)
+    }, IDLE_PERIOD)
+  }
+})()
