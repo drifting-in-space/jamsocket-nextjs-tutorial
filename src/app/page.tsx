@@ -2,15 +2,19 @@ import 'server-only';
 import HomeContainer from '../components/Home'
 import { init } from '@jamsocket/javascript/server'
 
-const WHITEBOARD_NAME = 'whiteboard-demo/default'
+const ACCOUNT_NAME = 'taylor'
+const SERVICE_NAME = 'whiteboard-demo-deployed'
+const WHITEBOARD_NAME = `${SERVICE_NAME}/default`
+const JAMSOCKET_API_TOKEN = process.env.JAMSOCKET_API_TOKEN
+
+if (typeof JAMSOCKET_API_TOKEN !== 'string') {
+  throw new Error(`Expected JAMSOCKET_API_TOKEN in environment`)
+}
 
 const spawnBackend = init({
-  account: '[FILL ME IN]',
-  service: 'whiteboard-demo',
-  // NOTE: we want to keep the Jamsocket token secret, so we can only do this in a server component
-  // We'll leave this blank for now, since we don't need it when developing with the dev CLI
-  token: '',
-  apiUrl: 'http://localhost:8080'
+  account: ACCOUNT_NAME,
+  service: SERVICE_NAME,
+  token: JAMSOCKET_API_TOKEN
 })
 
 export default async function Page() {
